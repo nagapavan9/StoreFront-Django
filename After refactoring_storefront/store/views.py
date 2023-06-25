@@ -4,16 +4,19 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyModelMixin
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.views import APIView
-from .models import Product,Collection, OrderItem, Review, Cart, CartItem
-from .serializers import ProductSerializer,CollectionSerializer, ReviewSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer
+from rest_framework.permissions import IsAdminUser,IsAuthenticated
+from .models import Product,Collection, OrderItem, Review, Cart, CartItem, Customer
+from .serializers import ProductSerializer,CollectionSerializer, ReviewSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer
 from .filters import ProductFilter
 from .pagination import DefaultPagination
+from .permissions import IsAdminOrReadOnly, FullDjangoModelPermission
 
 # Create your views here.
 #Model Views
@@ -25,6 +28,7 @@ class ProductViewSet(ModelViewSet):
     search_fields = ['title', 'description']
     ordering_fields = ['unit_price', 'last_update']
     pagination_class = DefaultPagination
+    permission_classes = [IsAdminOrReadOnly]
 
     #instead of queryset = Product.objects.all(), This get_queryset() is used to implement filtering (http://127.0.0.1:8000/store/products/?collection_id=6)
     # def get_queryset(self):
@@ -128,6 +132,7 @@ class ProductViewSet(ModelViewSet):
 class CollectionViewSet(ModelViewSet):
     queryset = Collection.objects.annotate(products_count=Count('products'))
     serializer_class = CollectionSerializer
+    permission_classes = IsAdminOrReadOnly
 
     def destroy(self, request, *args , **kwargs):
         if Collection.objects.filter(products=kwargs['pk']).count() > 0:
@@ -227,3 +232,20 @@ class CartItemViewSet(ModelViewSet):
             .filter(cart_id=self.kwargs['cart_pk'])
 #             .select_related('product')
 #
+class CustomerViewSet(CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, GenericViewSet):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+    permission_classes = [IsAdminUser]
+    # permission_classes = [FullDjangoModelPermission]
+
+    @action(detail=False, methods=['GET','PUT'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        (customer, created) = Customer.objects.get_or_create(user_id=request.user.id)
+        if request.method == 'GET':
+            serializer = CustomerSerializer
+            return Response(serializer.data)
+        elif request.method == 'PUT':
+            serializer = CustomerSerializer(customer, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
