@@ -12,10 +12,10 @@ from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyM
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAdminUser,IsAuthenticated
-from .models import Product,Collection, OrderItem, Review, Cart, CartItem, Customer, Order
-from .serializers import ProductSerializer,CollectionSerializer, ReviewSerializer, \
-    CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, \
-    CustomerSerializer, OrderSerializer, CreateOrderSerializer, UpdateOrderSerializer
+from .models import Product,Collection, OrderItem, Review, Cart, CartItem, Customer, Order, ProductImage
+from .serializers import ProductSerializer,CollectionSerializer, ReviewSerializer,CartSerializer, \
+                         CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer,\
+                         OrderSerializer, CreateOrderSerializer, UpdateOrderSerializer, ProductImageSerializer
 from .filters import ProductFilter
 from .pagination import DefaultPagination
 from .permissions import IsAdminOrReadOnly, FullDjangoModelPermission
@@ -23,7 +23,7 @@ from .permissions import IsAdminOrReadOnly, FullDjangoModelPermission
 # Create your views here.
 #Model Views
 class ProductViewSet(ModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.prefetch_related('images').all()
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = ProductFilter
@@ -134,7 +134,7 @@ class ProductViewSet(ModelViewSet):
 class CollectionViewSet(ModelViewSet):
     queryset = Collection.objects.annotate(products_count=Count('products'))
     serializer_class = CollectionSerializer
-    permission_classes = IsAdminOrReadOnly
+    permission_classes = [IsAdminOrReadOnly]
 
     def destroy(self, request, *args , **kwargs):
         if Collection.objects.filter(products=kwargs['pk']).count() > 0:
@@ -285,3 +285,12 @@ class OrderViewSet(ModelViewSet):
         customer_id = Customer.objects.only(
             'id').get(user_id=user.id)
         return Order.objects.filter(customer_id=customer_id)
+
+class ProductImageViewset(ModelViewSet):
+    serializer_class = ProductImageSerializer
+
+    def get_serializer_context(self):
+        return {'product_id': self.kwargs['product_pk']}
+
+    def get_queryset(self):
+        return ProductImage.objects.filter(product_id=self.kwargs['product_pk'])

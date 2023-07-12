@@ -13,6 +13,7 @@ router.register('orders', views.OrderViewSet, basename='orders')
 
 products_router = routers.NestedDefaultRouter(router,'products', lookup='product')
 products_router.register('reviews', views.ReviewViewSet, basename='product-reviews')
+products_router.register('images', views.ProductImageViewset, basename='product-images')
 
 #pprint(router.urls)
 #urlpatterns = router.urls + products_router.urls
