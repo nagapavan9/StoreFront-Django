@@ -3,7 +3,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.db.models import Count,Max,Min,Avg,Sum, Value, F, Func
 from django.db.models.functions import Concat
-from store.models import Product, OrderItem, Customer,Collection
+#from store.models import Product, OrderItem, Customer,Collection
+from django.core.mail import send_mail, mail_admins, BadHeaderError, EmailMessage
+from templated_mail.mail import BaseEmailMessage
 
 
 
@@ -35,5 +37,21 @@ def say_hello(request):
         #result = Customer.objects.annotate(order_items = Count('order'))
         # collection = Collection()
         # collection.title = 'videogames'
-        collection = Collection.objects.create(title = 'videogames')
-        return render(request, 'hello.html', {'name': 'Mosh','result': collection})
+        # collection = Collection.objects.create(title = 'videogames')
+        #Send mail function
+        try:
+                # mail_admins('This is a Admin mail','This is a Body of Admin mail',html_message='<h2>This is a HTML message</h2>')
+                # send_mail('This is my mail','this is the body','info@nagapavan.com',['bob@moshbuy.com','test@domain.com'])
+                # message = EmailMessage('THis is a attachment mail','This is a body of attachement mail','fromnaga.pavanfile.com',['recievenaga.pavanfile.com'],['kts@vas18.com'])
+                # message.attach_file('playground\\static\\images\\tiger.jpg')
+                # message.send()
+                message = BaseEmailMessage(
+                        context={'name':'Naga'},
+                        template_name='emails/hello.html'
+                )
+
+                message.send(['john@pavan.com'])
+
+        except BadHeaderError:
+                pass
+        return render(request, 'hello.html', {'name': 'Naga '})
